@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Молитва События — Камисато Аяка 5★</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Базовые настройки для полноэкранного режима без прокрутки на мобильных устройствах */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: #0b1021;
+            font-family: 'Montserrat', sans-serif;
+            color: #ece5d8;
+        }
+
+        .font-genshin {
+            font-family: 'Cinzel', 'Montserrat', serif;
+        }
+
+        /* Аутентичная кнопка молитвы Genshin Impact */
+        .wish-btn {
+            background: linear-gradient(180deg, #f9f6f0 0%, #e6dcc8 100%);
+            border: 2px solid #d3bc8e;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.45), inset 0 0 0 2px rgba(255, 255, 255, 0.7);
+            color: #495366;
+            transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+        }
+
+        .wish-btn:hover {
+            box-shadow: 0 0 22px rgba(211, 188, 142, 0.7), inset 0 0 0 2px #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .wish-btn:active {
+            transform: scale(0.96);
+            background: linear-gradient(180deg, #e6dcc8 0%, #d8ccb4 100%);
+        }
+
+        /* Декоративные рамки баннера Инадзума / Крио */
+        .banner-card {
+            background: radial-gradient(circle at 70% 35%, rgba(124, 214, 255, 0.25) 0%, rgba(28, 39, 76, 0.92) 55%, rgba(14, 20, 42, 0.98) 100%);
+            border: 1.5px solid rgba(211, 188, 142, 0.65);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), inset 0 0 30px rgba(136, 216, 255, 0.15);
+        }
+
+        .banner-inner-border {
+            border: 1px solid rgba(211, 188, 142, 0.3);
+        }
+
+        /* Анимации появления звезд и силуэта */
+        @keyframes starPop {
+            0% {
+                transform: scale(0) rotate(-45deg);
+                opacity: 0;
+            }
+            65% {
+                transform: scale(1.35) rotate(10deg);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        .star-animate {
+            opacity: 0;
+            animation: starPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .animate-float {
+            animation: floatSlow 4.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { filter: drop-shadow(0 0 12px rgba(130, 224, 255, 0.65)); }
+            50% { filter: drop-shadow(0 0 24px rgba(255, 215, 110, 0.85)); }
+        }
+
+        .cryo-glow {
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+
+        /* Эффект проявления из силуэта */
+        .silhouette-mode {
+            filter: brightness(0) invert(0.08) drop-shadow(0 0 25px rgba(135, 225, 255, 0.9));
+            transform: scale(0.92);
+            transition: filter 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .revealed-mode {
+            filter: brightness(1) invert(0) drop-shadow(0 12px 30px rgba(80, 195, 255, 0.45));
+            transform: scale(1);
+            transition: filter 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Плавные переходы экранов */
+        .screen-layer {
+            position: absolute;
+            inset: 0;
+            transition: opacity 0.45s ease, visibility 0.45s ease;
+        }
+
+        .hidden-layer {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .visible-layer {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        /* Вспышка экрана при падении метеора */
+        #flash-overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle, #ffffff 0%, #fff4cc 50%, #ffd257 100%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 40;
+            transition: opacity 0.35s ease-out;
+        }
+    </style>
+</head>
+<body class="relative w-full h-full overflow-hidden select-none">
+
+    <!-- Фоновый Canvas для звездного неба, метеора и лепестков сакуры -->
+    <canvas id="fx-canvas" class="fixed inset-0 w-full h-full z-0 pointer-events-none"></canvas>
+
+    <!-- Слой ослепительной золотой/белой вспышки -->
+    <div id="flash-overlay"></div>
+
+    <!-- =========================================================
+         ЭКРАН 1: СТАРТОВЫЙ ЭКРАН БАННЕРА МОЛИТВЫ
+         ========================================================= -->
+    <div id="banner-screen" class="screen-layer visible-layer z-10 flex flex-col justify-between p-3 sm:p-6 md:p-8">
+        
+        <!-- Верхняя панель навигации -->
+        <header class="w-full max-w-5xl mx-auto flex items-center justify-between gap-2 z-20">
+            <!-- Левая часть: Настройки + заголовок молитвы -->
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <button id="open-settings-btn" title="Настроить текст поздравления"
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-900/70 border border-[#d3bc8e]/50 flex items-center justify-center text-[#d3bc8e] hover:bg-slate-800 active:scale-95 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+
+                <div class="hidden sm:flex items-center gap-2 bg-slate-900/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-[#d3bc8e]/40">
+                    <span class="w-2.5 h-2.5 rotate-45 bg-[#7cd6ff] inline-block"></span>
+                    <span class="text-xs sm:text-sm font-semibold tracking-wide text-[#ece5d8]">Молитва события персонажа</span>
+                </div>
+            </div>
+
+            <!-- Правая часть: Переплетающиеся судьбы + звук -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="flex items-center gap-2 bg-slate-950/75 backdrop-blur-md px-3 sm:px-4 py-1.5 rounded-full border border-[#d3bc8e]/50 shadow-lg">
+                    <!-- Иконка Переплетающейся судьбы -->
+                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 36 36" fill="none">
+                        <defs>
+                            <linearGradient id="fateGrad" x1="0" y1="0" x2="36" y2="36">
+                                <stop offset="0%" stop-color="#ff9ce3"/>
+                                <stop offset="50%" stop-color="#a8d8ff"/>
+                                <stop offset="100%" stop-color="#ffd573"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M18 3L22.5 13.5L33 18L22.5 22.5L18 33L13.5 22.5L3 18L13.5 13.5L18 3Z" fill="url(#fateGrad)"/>
+                        <circle cx="18" cy="18" r="5" fill="#ffffff" fill-opacity="0.85"/>
+                    </svg>
+                    <span class="text-xs sm:text-sm font-bold text-[#ece5d8]">1</span>
+                </div>
+
+                <button id="sound-toggle-btn" title="Включить/выключить звук"
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-900/70 border border-[#d3bc8e]/50 flex items-center justify-center text-[#ece5d8] hover:bg-slate-800 active:scale-95 transition">
+                    <svg id="sound-on-icon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                    </svg>
+                    <svg id="sound-off-icon" class="w-5 h-5 hidden text-rose-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Центральная карточка баннера «Цапля в инее» -->
+        <main class="w-full max-w-4xl mx-auto my-auto flex flex-col items-center justify-center px-1">
+            <div class="banner-card relative w-full rounded-2xl p-4 sm:p-7 md:p-8 overflow-hidden">
+                <!-- Внутренняя тонкая золотая рамка -->
+                <div class="banner-inner-border absolute inset-2 rounded-xl pointer-events-none"></div>
+
+                <!-- Декоративный водяной знак Крио-стихии на фоне -->
+                <svg class="absolute -right-10 -bottom-10 w-64 h-64 sm:w-80 sm:h-80 text-[#7cd6ff]/10 pointer-events-none" viewBox="0 0 100 100" fill="currentColor">
+                    <path d="M50 5 L56 32 L82 22 L64 44 L92 50 L64 56 L82 78 L56 68 L50 95 L44 68 L18 78 L36 56 L8 50 L36 44 L18 22 L44 32 Z"/>
+                </svg>
+
+                <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
+                    <!-- Текстовый блок баннера -->
+                    <div class="flex-1 text-center md:text-left space-y-2 sm:space-y-3">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3a6b8c]/50 border border-[#7cd6ff]/40 text-[#9ce2ff] text-xs font-semibold tracking-wider uppercase">
+                            <span>Молитва события персонажа</span>
+                        </div>
+
+                        <h1 class="font-genshin text-2xl sm:text-4xl md:text-5xl font-bold tracking-wide text-white drop-shadow-[0_2px_10px_rgba(124,214,255,0.45)]">
+                            Цапля в инее
+                        </h1>
+
+                        <p class="text-xs sm:text-sm text-[#cbd5e1] max-w-md mx-auto md:mx-0 leading-relaxed">
+                            Особый гарант активирован! Шанс получения эксклюзивного персонажа 5★ <span class="text-[#ffd573] font-semibold">Камисато Аяка</span> составляет 100%.
+                        </p>
+
+                        <!-- Плашка персонажа на баннере -->
+                        <div class="pt-1 sm:pt-2 flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-3">
+                            <div class="flex items-center gap-2 bg-slate-950/75 border border-[#d3bc8e]/50 rounded-xl px-3 py-1.5">
+                                <span class="text-[#7cd6ff] text-base">❄️</span>
+                                <div class="text-left">
+                                    <div class="text-xs sm:text-sm font-bold text-white leading-tight">Камисато Аяка</div>
+                                    <div class="text-[11px] text-[#ffd573] tracking-widest">★★★★★</div>
+                                </div>
+                            </div>
+
+                            <div class="bg-amber-500/15 border border-amber-300/40 rounded-xl px-3 py-1.5 text-left">
+                                <div class="text-[10px] uppercase tracking-wider text-amber-200/80">Счётчик гаранта</div>
+                                <div class="text-xs sm:text-sm font-bold text-[#ffd573]">90 / 90 (Гарант 5★)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Стилизованный герб / веер Аяки справа -->
+                    <div class="relative w-32 h-32 sm:w-44 sm:h-44 md:w-52 md:h-52 shrink-0 flex items-center justify-center animate-float">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-[#38bdf8]/25 via-[#818cf8]/20 to-[#f472b6]/25 blur-xl"></div>
+                        <svg class="w-full h-full cryo-glow" viewBox="0 0 200 200" fill="none">
+                            <!-- Внешнее кольцо Инадзумы -->
+                            <circle cx="100" cy="100" r="86" stroke="#d3bc8e" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.7"/>
+                            <circle cx="100" cy="100" r="74" stroke="#7cd6ff" stroke-width="1" opacity="0.5"/>
+                            <!-- Веер Камисато -->
+                            <path d="M100 148 L36 82 C62 46 138 46 164 82 Z" fill="url(#fanGrad)" stroke="#e2e8f0" stroke-width="2"/>
+                            <path d="M100 148 L56 68 M100 148 L78 57 M100 148 L100 53 M100 148 L122 57 M100 148 L144 68" stroke="#bae6fd" stroke-width="1.2" opacity="0.75"/>
+                            <!-- Крио-снежинка в центре веера -->
+                            <path d="M100 74 L104 90 L120 86 L108 98 L124 102 L108 106 L120 118 L104 114 L100 130 L96 114 L80 118 L92 106 L76 102 L92 98 L80 86 L96 90 Z" fill="#ffffff"/>
+                            <!-- Кисточка веера -->
+                            <circle cx="100" cy="153" r="5" fill="#f472b6"/>
+                            <path d="M100 158 L95 178 M100 158 L100 180 M100 158 L105 178" stroke="#f9a8d4" stroke-width="2" stroke-linecap="round"/>
+                            <defs>
+                                <linearGradient id="fanGrad" x1="36" y1="50" x2="164" y2="148" gradientUnits="userSpaceOnUse">
+                                    <stop offset="0%" stop-color="#1e3a8a"/>
+                                    <stop offset="50%" stop-color="#3b82f6"/>
+                                    <stop offset="100%" stop-color="#93c5fd"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Нижняя панель с кнопкой молитвы -->
+        <footer class="w-full max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 pb-2 sm:pb-3 z-20">
+            <div class="text-xs text-slate-300/80 text-center sm:text-left">
+                Нажми на кнопку молитвы, чтобы призвать персонажа
+            </div>
+
+            <button id="wish-trigger-btn" class="wish-btn w-full sm:w-auto min-w-[240px] px-7 py-3.5 rounded-full flex items-center justify-center gap-3 cursor-pointer">
+                <div class="text-center">
+                    <div class="text-sm sm:text-base font-bold tracking-wide leading-tight">Помолиться ×1</div>
+                    <div class="flex items-center justify-center gap-1 text-xs font-semibold text-[#7a6b52] mt-0.5">
+                        <svg class="w-4 h-4" viewBox="0 0 36 36" fill="none">
+                            <path d="M18 3L22.5 13.5L33 18L22.5 22.5L18 33L13.5 22.5L3 18L13.5 13.5L18 3Z" fill="#d97706"/>
+                        </svg>
+                        <span>× 1</span>
+                    </div>
+                </div>
+            </button>
+        </footer>
+    </div>
+
+    <!-- =========================================================
+         ЭКРАН 2: HUD ВО ВРЕМЯ АНИМАЦИИ ПОЛЕТА ЗВЕЗДЫ
+         ========================================================= -->
+    <div id="animation-hud" class="screen-layer hidden-layer z-20 pointer-events-none flex justify-end p-4 sm:p-6">
+        <button id="skip-btn" class="pointer-events-auto px-4 py-2 rounded-full bg-slate-900/60 backdrop-blur-md border border-white/25 text-white/90 text-xs sm:text-sm font-semibold hover:bg-slate-800/80 active:scale-95 transition">
+            Пропустить ▸
+        </button>
+    </div>
+
+    <!-- =========================================================
+         ЭКРАН 3: ФИНАЛЬНЫЙ ЭКРАН ВЫПАДЕНИЯ КАМИСАТО АЯКИ 5★
+         ========================================================= -->
+    <div id="result-screen" class="screen-layer hidden-layer z-30 flex flex-col justify-between p-3 sm:p-6 overflow-hidden">
+        
+        <!-- Верхняя панель финала -->
+        <div class="w-full max-w-5xl mx-auto flex items-center justify-between z-20">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/50 text-amber-200 text-xs font-semibold">
+                <span>★ ЛЕГЕНДАРНЫЙ ДРОП</span>
+            </div>
+
+            <button id="replay-btn" class="px-3.5 py-1.5 rounded-full bg-slate-900/70 border border-[#d3bc8e]/50 text-[#ece5d8] text-xs sm:text-sm font-medium hover:bg-slate-800 active:scale-95 transition">
+                ↺ Сыграть ещё раз
+            </button>
+        </div>
+
+        <!-- Центральная композиция персонажа и поздравления -->
+        <div class="w-full max-w-4xl mx-auto my-auto flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 z-20 px-2">
+            
+            <!-- Портрет / силуэт Аяки -->
+            <div class="relative w-44 h-44 sm:w-64 sm:h-64 md:w-72 md:h-72 shrink-0 flex items-center justify-center">
+                <!-- Золотое и крио сияние за спиной -->
+                <div class="absolute inset-2 rounded-full bg-gradient-to-b from-[#ffd573]/35 via-[#7cd6ff]/30 to-transparent blur-2xl"></div>
+                
+                <!-- Контейнер персонажа (с поддержкой пользовательского фото или встроенного арта) -->
+                <div id="character-visual" class="silhouette-mode relative w-full h-full flex items-center justify-center">
+                    <img id="custom-character-img" alt="Камисато Аяка" class="hidden w-full h-full object-contain rounded-2xl drop-shadow-[0_10px_25px_rgba(124,214,255,0.6)]" />
+                    
+                    <!-- Встроенная стилизованная арт-иллюстрация Камисато Аяки -->
+                    <svg id="default-ayaka-svg" class="w-full h-full" viewBox="0 0 300 320" fill="none">
+                        <defs>
+                            <radialGradient id="auraGrad" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.9"/>
+                                <stop offset="55%" stop-color="#38bdf8" stop-opacity="0.35"/>
+                                <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0"/>
+                            </radialGradient>
+                            <linearGradient id="hairGrad" x1="150" y1="35" x2="150" y2="230" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#f1f5f9"/>
+                                <stop offset="60%" stop-color="#cbd5e1"/>
+                                <stop offset="100%" stop-color="#93c5fd"/>
+                            </linearGradient>
+                            <linearGradient id="dressGrad" x1="150" y1="145" x2="150" y2="300" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#1e293b"/>
+                                <stop offset="50%" stop-color="#1d4ed8"/>
+                                <stop offset="100%" stop-color="#60a5fa"/>
+                            </linearGradient>
+                            <linearGradient id="goldTrim" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#fef08a"/>
+                                <stop offset="100%" stop-color="#d97706"/>
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Магический круг позади -->
+                        <circle cx="150" cy="155" r="125" fill="url(#auraGrad)"/>
+                        <circle cx="150" cy="155" r="108" stroke="#ffd573" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.8"/>
+                        <circle cx="150" cy="155" r="92" stroke="#7cd6ff" stroke-width="1" opacity="0.65"/>
+
+                        <!-- Высокий хвост Аяки -->
+                        <path d="M168 62 C215 48 242 98 228 165 C220 140 205 122 184 114 Z" fill="url(#hairGrad)"/>
+                        <path d="M165 55 C195 35 220 65 215 115" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+
+                        <!-- Заколка-шпилька с цветком сакуры -->
+                        <circle cx="174" cy="64" r="11" fill="#f472b6" stroke="#fdf2f8" stroke-width="2"/>
+                        <circle cx="174" cy="64" r="4" fill="#fef08a"/>
+
+                        <!-- Волосы и челка -->
+                        <path d="M108 92 C108 52 192 52 192 92 L198 188 C184 176 178 152 178 130 L122 130 C122 152 116 176 102 188 Z" fill="url(#hairGrad)"/>
+                        
+                        <!-- Лицо -->
+                        <path d="M124 92 C124 122 136 136 150 136 C164 136 176 122 176 92 C176 74 124 74 124 92 Z" fill="#fff1f2"/>
+                        
+                        <!-- Пряди челки -->
+                        <path d="M122 86 L132 106 L140 86 L150 108 L160 86 L168 106 L178 86 C172 64 128 64 122 86 Z" fill="#e2e8f0"/>
+
+                        <!-- Выразительные голубые глаза -->
+                        <ellipse cx="138" cy="105" rx="5.5" ry="6.5" fill="#1e3a8a"/>
+                        <circle cx="136.5" cy="103" r="2" fill="#ffffff"/>
+                        <ellipse cx="162" cy="105" rx="5.5" ry="6.5" fill="#1e3a8a"/>
+                        <circle cx="160.5" cy="103" r="2" fill="#ffffff"/>
+                        <!-- Родинка под левым глазом (канон Аяки!) -->
+                        <circle cx="134" cy="115" r="1.3" fill="#64748b"/>
+                        <!-- Нежная улыбка -->
+                        <path d="M145 122 Q150 126 155 122" stroke="#f43f5e" stroke-width="1.8" stroke-linecap="round"/>
+
+                        <!-- Наряд / Доспех клана Камисато -->
+                        <path d="M116 144 L184 144 L214 275 L86 275 Z" fill="url(#dressGrad)" stroke="url(#goldTrim)" stroke-width="2"/>
+                        <!-- Белый воротник и розовый бант -->
+                        <path d="M126 142 L150 164 L174 142 L162 136 L150 148 L138 136 Z" fill="#ffffff"/>
+                        <path d="M134 164 L150 172 L166 164 L162 182 L150 175 L138 182 Z" fill="#ec4899"/>
+                        <circle cx="150" cy="171" r="5" fill="#fbcfe8"/>
+
+                        <!-- Золотые узоры волн на юбке -->
+                        <path d="M104 235 Q127 220 150 235 T196 235" stroke="#fde047" stroke-width="2" fill="none"/>
+                        <path d="M96 254 Q123 239 150 254 T204 254" stroke="#93c5fd" stroke-width="2" fill="none"/>
+
+                        <!-- Раскрытый боевой веер в руке -->
+                        <g transform="translate(54, 152) rotate(-18)">
+                            <path d="M45 65 L0 15 C22 -5 68 -5 90 15 Z" fill="#38bdf8" stroke="#fef08a" stroke-width="2"/>
+                            <path d="M45 65 L20 6 M45 65 L45 2 M45 65 L70 6" stroke="#ffffff" stroke-width="1.2" opacity="0.8"/>
+                            <circle cx="45" cy="28" r="7" fill="#ffffff"/>
+                        </g>
+
+                        <!-- Парящие лепестки сакуры и крио-кристаллы -->
+                        <path d="M55 75 Q65 65 72 78 Q60 85 55 75 Z" fill="#f9a8d4"/>
+                        <path d="M238 95 Q248 85 255 98 Q243 105 238 95 Z" fill="#f472b6"/>
+                        <path d="M235 215 L240 225 L250 230 L240 235 L235 245 L230 235 L220 230 L230 225 Z" fill="#bae6fd"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Правая колонка: Имя, 5 звезд и карточка поздравления -->
+            <div class="flex-1 text-center md:text-left space-y-2.5 sm:space-y-4 max-w-lg">
+                
+                <!-- Стихия + Имя -->
+                <div class="flex flex-col sm:flex-row items-center md:items-end justify-center md:justify-start gap-2 sm:gap-3">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#0ea5e9]/20 border border-[#7cd6ff]/60 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.4)]">
+                        <span class="text-xl sm:text-2xl">❄️</span>
+                    </div>
+                    <div>
+                        <div id="result-subtitle" class="text-xs sm:text-sm font-semibold uppercase tracking-widest text-[#7cd6ff]">
+                            Инеевая цапля • Крио
+                        </div>
+                        <h2 id="result-title" class="font-genshin text-2xl sm:text-4xl font-extrabold text-white tracking-wide drop-shadow-[0_2px_12px_rgba(255,213,115,0.5)]">
+                            Камисато Аяка
+                        </h2>
+                    </div>
+                </div>
+
+                <!-- 5 Золотых Звезд с поочередной анимацией -->
+                <div id="stars-container" class="flex items-center justify-center md:justify-start gap-1.5 sm:gap-2 py-0.5">
+                    <!-- Звезды добавляются скриптом при открытии экрана -->
+                </div>
+
+                <!-- Блок поздравления / сообщения для девушки -->
+                <div class="relative rounded-2xl bg-slate-900/80 backdrop-blur-md border border-[#d3bc8e]/70 p-4 sm:p-5 shadow-[0_12px_35px_rgba(0,0,0,0.6)]">
+                    <div class="absolute -top-2.5 left-4 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#d3bc8e] to-[#ffd573] text-slate-950 text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+                        Награда получена
+                    </div>
+                    <p id="greeting-text" class="text-sm sm:text-base md:text-lg font-medium text-[#f8fafc] leading-relaxed pt-1">
+                        Гарант сработал! С Днём Рождения! Забери свою 5★ награду в реальном мире ❤️
+                    </p>
+                    <div id="greeting-footer" class="mt-2 text-xs text-[#d3bc8e] font-medium">
+                        Твой персональный разработчик ✨
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Нижний декоративный разделитель -->
+        <div class="w-full max-w-3xl mx-auto flex items-center justify-center gap-3 pb-1 opacity-75">
+            <div class="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#d3bc8e]"></div>
+            <span class="text-[#ffd573] text-xs">✦</span>
+            <div class="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#d3bc8e]"></div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         МОДАЛЬНОЕ ОКНО НАСТРОЕК ПОЗДРАВЛЕНИЯ
+         ========================================================= -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="w-full max-w-md rounded-2xl bg-[#131b36] border border-[#d3bc8e]/70 p-5 sm:p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 class="text-base sm:text-lg font-bold text-[#ece5d8]">Настройка поздравления</h3>
+                <button id="close-settings-btn" class="text-slate-400 hover:text-white text-xl leading-none px-2">✕</button>
+            </div>
+
+            <div class="space-y-3 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-[#d3bc8e] mb-1">Текст поздравления на финальном экране</label>
+                    <textarea id="input-greeting" rows="3"
+                        class="w-full rounded-xl bg-slate-900/90 border border-white/15 px-3 py-2 text-sm text-white focus:outline-none focus:border-[#ffd573]"
+                        placeholder="Например: Гарант сработал! С Днём Рождения! Забери свою 5★ награду в реальном мире ❤️"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#d3bc8e] mb-1">Подпись внизу карточки</label>
+                    <input id="input-footer" type="text"
+                        class="w-full rounded-xl bg-slate-900/90 border border-white/15 px-3 py-2 text-sm text-white focus:outline-none focus:border-[#ffd573]"
+                        placeholder="Твой персональный разработчик ✨" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#d3bc8e] mb-1">Своя картинка Аяки / фигурки (необязательно)</label>
+                    <input id="input-image" type="file" accept="image/*"
+                        class="w-full text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#d3bc8e] file:text-slate-900 hover:file:bg-[#e5cfa3]" />
+                    <button id="reset-image-btn" type="button" class="mt-1.5 text-[11px] text-rose-300 hover:underline hidden">
+                        Вернуть встроенный арт Аяки
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button id="save-settings-btn" class="wish-btn px-5 py-2 rounded-full text-sm font-bold cursor-pointer">
+                    Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * 1. ЗВУКОВОЙ ДВИЖОК (WEB AUDIO API) — АУТЕНТИЧНЫЙ СИНТЕЗ МОЛИТВЫ GENSHIN
+         * ============================================================================
+         */
+        class GenshinSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.activeNodes = [];
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContextClass();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                if (this.muted) {
+                    this.stopAll();
+                }
+                return this.muted;
+            }
+
+            stopAll() {
+                this.activeNodes.forEach(node => {
+                    try {
+                        if (node.stop) node.stop();
+                        if (node.disconnect) node.disconnect();
+                    } catch (e) {}
+                });
+                this.activeNodes = [];
+            }
+
+            // Мягкий кристальный звон при нажатии на кнопку «Помолиться»
+            playClickChime() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const freqs = [1046.50, 1318.51, 1567.98, 2093.00]; // C6, E6, G6, C7
+
+                freqs.forEach((f, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now + idx * 0.035);
+
+                    gain.gain.setValueAtTime(0.001, now + idx * 0.035);
+                    gain.gain.exponentialRampToValueAtTime(0.14, now + idx * 0.035 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.035 + 0.55);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + idx * 0.035);
+                    osc.stop(now + idx * 0.035 + 0.6);
+                    this.activeNodes.push(osc);
+                });
+            }
+
+            // Полная звуковая дорожка полета звезды (4.6 сек) + переход в золотую легенду
+            playWishSequence(onImpactCallback) {
+                if (this.muted) return;
+                this.init();
+                this.stopAll();
+
+                const now = this.ctx.currentTime;
+                const totalFlight = 4.5;
+
+                // 1) Космический ветер (Filtered White Noise с нарастанием частоты)
+                const bufferSize = this.ctx.sampleRate * totalFlight;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = noiseBuffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.Q.value = 3.2;
+                filter.frequency.setValueAtTime(220, now);
+                filter.frequency.exponentialRampToValueAtTime(1100, now + 2.4);
+                filter.frequency.exponentialRampToValueAtTime(3400, now + totalFlight);
+
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.01, now);
+                noiseGain.gain.linearRampToValueAtTime(0.16, now + 2.3);
+                noiseGain.gain.linearRampToValueAtTime(0.32, now + totalFlight - 0.1);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + totalFlight + 0.2);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(this.ctx.destination);
+                noise.start(now);
+                this.activeNodes.push(noise);
+
+                // 2) Небесный гармонический пад (нарастающий гул полета)
+                const padFreqs = [261.63, 392.00, 523.25]; // C4, G4, C5
+                padFreqs.forEach(freq => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + totalFlight);
+
+                    gain.gain.setValueAtTime(0.001, now);
+                    gain.gain.linearRampToValueAtTime(0.07, now + 2.5);
+                    gain.gain.linearRampToValueAtTime(0.12, now + totalFlight - 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + totalFlight + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + totalFlight + 0.25);
+                    this.activeNodes.push(osc);
+                });
+
+                // 3) Волшебный перезвон превращения синей звезды в золотую 5★ (на 2.35 сек)
+                const goldShiftTime = now + 2.35;
+                const shimmerNotes = [587.33, 783.99, 987.77, 1174.66, 1567.98, 1975.53];
+                shimmerNotes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, goldShiftTime + idx * 0.08);
+
+                    gain.gain.setValueAtTime(0.001, goldShiftTime + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.13, goldShiftTime + idx * 0.08 + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, goldShiftTime + idx * 0.08 + 1.1);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(goldShiftTime + idx * 0.08);
+                    osc.stop(goldShiftTime + idx * 0.08 + 1.2);
+                    this.activeNodes.push(osc);
+                });
+            }
+
+            // Кульминационный удар + арфовый аккорд Инадзумы/Крио при появлении Аяки
+            playRevealFanfare() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+
+                // Глубокий Sub-Bass удар вспышки
+                const sub = this.ctx.createOscillator();
+                const subGain = this.ctx.createGain();
+                sub.type = 'sine';
+                sub.frequency.setValueAtTime(140, now);
+                sub.frequency.exponentialRampToValueAtTime(36, now + 0.65);
+
+                subGain.gain.setValueAtTime(0.45, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+
+                sub.connect(subGain);
+                subGain.connect(this.ctx.destination);
+                sub.start(now);
+                sub.stop(now + 0.9);
+                this.activeNodes.push(sub);
+
+                // Торжественный перебор арфы (Fmaj9 / C — воздушный стиль Genshin)
+                const harpNotes = [
+                    349.23, // F4
+                    440.00, // A4
+                    523.25, // C5
+                    659.25, // E5
+                    783.99, // G5
+                    1046.50, // C6
+                    1318.51, // E6
+                    1567.98  // G6
+                ];
+
+                harpNotes.forEach((freq, i) => {
+                    const startTime = now + 0.08 + i * 0.065;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, startTime);
+
+                    gain.gain.setValueAtTime(0.001, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.14, startTime + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 2.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(startTime);
+                    osc.stop(startTime + 2.3);
+                    this.activeNodes.push(osc);
+                });
+
+                // 5 последовательных звонких нот для каждой из 5 золотых звёзд (★★★★★)
+                const starNotes = [1046.50, 1174.66, 1318.51, 1567.98, 2093.00];
+                starNotes.forEach((freq, i) => {
+                    const startTime = now + 0.65 + i * 0.14;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, startTime);
+
+                    gain.gain.setValueAtTime(0.001, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.11, startTime + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.7);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(startTime);
+                    osc.stop(startTime + 0.75);
+                    this.activeNodes.push(osc);
+                });
+            }
+        }
+
+        const soundEngine = new GenshinSoundEngine();
+
+        /**
+         * ============================================================================
+         * 2. ГРАФИЧЕСКИЙ ДВИЖОК (HTML5 CANVAS) — ЗВЕЗДНОЕ НЕБО, ПОЛЕТ МЕТЕОРА И САКУРА
+         * ============================================================================
+         */
+        const canvas = document.getElementById('fx-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = 0;
+        let height = 0;
+        let mode = 'idle'; // 'idle' | 'wishing' | 'result'
+        let wishStartTime = 0;
+        const WISH_DURATION = 4600; // 4.6 секунды эпичного полета
+
+        // Частицы фоновых звезд
+        let bgStars = [];
+        // Частицы шлейфа метеора
+        let trailParticles = [];
+        // Лепестки сакуры и крио-снежинки на финальном экране
+        let petals = [];
+
+        function resizeCanvas() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            initStars();
+        }
+
+        function initStars() {
+            bgStars = [];
+            const count = Math.floor((width * height) / 7000);
+            for (let i = 0; i < count; i++) {
+                bgStars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    z: Math.random() * 2 + 0.5,
+                    size: Math.random() * 1.8 + 0.4,
+                    alpha: Math.random() * 0.8 + 0.2,
+                    twinkleSpeed: Math.random() * 0.03 + 0.01
+                });
+            }
+        }
+
+        function initPetals() {
+            petals = [];
+            const count = 48;
+            for (let i = 0; i < count; i++) {
+                const isCryo = Math.random() > 0.45;
+                petals.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.3) * 1.4,
+                    vy: Math.random() * 1.3 + 0.5,
+                    size: Math.random() * 6 + 4,
+                    angle: Math.random() * Math.PI * 2,
+                    spin: (Math.random() - 0.5) * 0.05,
+                    color: isCryo ? 'rgba(147, 226, 255, 0.75)' : 'rgba(249, 168, 212, 0.8)',
+                    isCryo
+                });
+            }
+        }
+
+        // Интерполяция цвета кометы: Синий -> Фиолетовый -> Ослепительное Золото 5★
+        function getMeteorPalette(progress) {
+            if (progress < 0.35) {
+                // Синий метеор (3★)
+                return {
+                    core: '#e0f2fe',
+                    mid: '#38bdf8',
+                    outer: 'rgba(37, 99, 235, 0.45)',
+                    spark: '#7dd3fc'
+                };
+            } else if (progress < 0.52) {
+                // Фиолетовый переход (4★)
+                return {
+                    core: '#f3e8ff',
+                    mid: '#c084fc',
+                    outer: 'rgba(147, 51, 234, 0.55)',
+                    spark: '#e879f9'
+                };
+            } else {
+                // Золотая легенда (5★)
+                return {
+                    core: '#ffffff',
+                    mid: '#fde047',
+                    outer: 'rgba(245, 158, 11, 0.7)',
+                    spark: '#fef08a'
+                };
+            }
+        }
+
+        function drawBackgroundGradient(progress = 0) {
+            const grad = ctx.createLinearGradient(0, 0, 0, height);
+            if (mode === 'wishing') {
+                // Во время крутки небо темнеет, а ближе к золотой фазе подсвечивается теплым сиянием
+                const goldBoost = progress > 0.52 ? (progress - 0.52) * 0.45 : 0;
+                grad.addColorStop(0, '#040712');
+                grad.addColorStop(0.55, '#0b1430');
+                grad.addColorStop(1, `rgba(${Math.floor(25 + goldBoost * 180)}, ${Math.floor(42 + goldBoost * 120)}, ${Math.floor(88)}, 1)`);
+            } else {
+                grad.addColorStop(0, '#090e21');
+                grad.addColorStop(0.5, '#121d42');
+                grad.addColorStop(1, '#1b2c5e');
+            }
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function updateAndDrawStars(speedMultiplier = 1, stretch = false) {
+            const cx = width * 0.5;
+            const cy = height * 0.45;
+
+            for (let s of bgStars) {
+                if (stretch) {
+                    // Эффект варп-прыжка сквозь звезды к центру экрана
+                    const dx = s.x - cx;
+                    const dy = s.y - cy;
+                    s.x += dx * 0.025 * speedMultiplier;
+                    s.y += dy * 0.025 * speedMultiplier;
+
+                    if (s.x < 0 || s.x > width || s.y < 0 || s.y > height) {
+                        s.x = cx + (Math.random() - 0.5) * width * 0.4;
+                        s.y = cy + (Math.random() - 0.5) * height * 0.4;
+                    }
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${s.alpha})`;
+                    ctx.lineWidth = s.size;
+                    ctx.moveTo(s.x, s.y);
+                    ctx.lineTo(s.x - dx * 0.08, s.y - dy * 0.08);
+                    ctx.stroke();
+                } else {
+                    s.alpha += s.twinkleSpeed;
+                    if (s.alpha > 1 || s.alpha < 0.2) s.twinkleSpeed *= -1;
+                    ctx.fillStyle = `rgba(226, 232, 240, ${s.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function drawMeteorSequence(now) {
+            const elapsed = now - wishStartTime;
+            const progress = Math.min(elapsed / WISH_DURATION, 1);
+
+            drawBackgroundGradient(progress);
+            updateAndDrawStars(1 + progress * 3.5, true);
+
+            // Траектория падения кометы: из правого верхнего угла по дуге к центру экрана
+            const startX = width * 0.92;
+            const startY = height * 0.08;
+            const endX = width * 0.5;
+            const endY = height * 0.48;
+
+            // Плавное ускорение (easeInCubic ближе к финалу)
+            const ease = progress < 0.5
+                ? 2 * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+            const arcOffset = Math.sin(progress * Math.PI) * (Math.min(width, height) * 0.14);
+            const mx = startX + (endX - startX) * ease - arcOffset * 0.4;
+            const my = startY + (endY - startY) * ease + arcOffset;
+
+            const palette = getMeteorPalette(progress);
+
+            // Генерация искр и шлейфа
+            const spawnCount = progress > 0.52 ? 12 : 6;
+            for (let i = 0; i < spawnCount; i++) {
+                trailParticles.push({
+                    x: mx + (Math.random() - 0.5) * 18,
+                    y: my + (Math.random() - 0.5) * 18,
+                    vx: (Math.random() - 0.2) * 3.5 + 1.5,
+                    vy: (Math.random() - 0.8) * 3.5 - 1.5,
+                    size: Math.random() * (progress > 0.52 ? 5.5 : 3.5) + 1.5,
+                    life: 1,
+                    decay: Math.random() * 0.025 + 0.018,
+                    color: palette.spark
+                });
+            }
+
+            // Отрисовка частиц шлейфа
+            for (let i = trailParticles.length - 1; i >= 0; i--) {
+                const p = trailParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+                if (p.life <= 0) {
+                    trailParticles.splice(i, 1);
+                    continue;
+                }
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Длинный светящийся хвост кометы
+            const tailX = mx + (width * 0.35) * (1 - progress * 0.3);
+            const tailY = my - (height * 0.28) * (1 - progress * 0.3);
+            const tailGrad = ctx.createLinearGradient(mx, my, tailX, tailY);
+            tailGrad.addColorStop(0, palette.core);
+            tailGrad.addColorStop(0.25, palette.mid);
+            tailGrad.addColorStop(0.65, palette.outer);
+            tailGrad.addColorStop(1, 'rgba(0,0,0,0)');
+
+            ctx.beginPath();
+            ctx.moveTo(mx, my);
+            ctx.lineTo(tailX - 24, tailY - 12);
+            ctx.lineTo(tailX + 24, tailY + 12);
+            ctx.closePath();
+            ctx.fillStyle = tailGrad;
+            ctx.fill();
+
+            // Ударная волна в момент превращения в золото (5★)
+            if (progress > 0.50 && progress < 0.72) {
+                const waveProgress = (progress - 0.50) / 0.22;
+                const waveRadius = waveProgress * Math.max(width, height) * 0.45;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(mx, my, waveRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(254, 240, 138, ${1 - waveProgress})`;
+                ctx.lineWidth = 6 * (1 - waveProgress);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Ядро звезды (растет перед самым столкновением с экраном)
+            const burstScale = progress > 0.85 ? 1 + ((progress - 0.85) / 0.15) * 6 : 1;
+            const glowRadius = (progress > 0.52 ? 65 : 42) * burstScale;
+
+            const coreGlow = ctx.createRadialGradient(mx, my, 2, mx, my, glowRadius);
+            coreGlow.addColorStop(0, '#ffffff');
+            coreGlow.addColorStop(0.3, palette.mid);
+            coreGlow.addColorStop(0.7, palette.outer);
+            coreGlow.addColorStop(1, 'rgba(0,0,0,0)');
+
+            ctx.fillStyle = coreGlow;
+            ctx.beginPath();
+            ctx.arc(mx, my, glowRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Четырехконечный блик звезды
+            ctx.save();
+            ctx.translate(mx, my);
+            ctx.rotate(elapsed * 0.004);
+            ctx.fillStyle = '#ffffff';
+            const rayLen = glowRadius * 1.35;
+            ctx.beginPath();
+            ctx.moveTo(0, -rayLen);
+            ctx.quadraticCurveTo(4, -4, rayLen, 0);
+            ctx.quadraticCurveTo(4, 4, 0, rayLen);
+            ctx.quadraticCurveTo(-4, 4, -rayLen, 0);
+            ctx.quadraticCurveTo(-4, -4, 0, -rayLen);
+            ctx.fill();
+            ctx.restore();
+
+            // Финальная вспышка при p >= 0.94
+            if (progress >= 0.94) {
+                const flashEl = document.getElementById('flash-overlay');
+                flashEl.style.opacity = '1';
+            }
+
+            if (progress >= 1) {
+                completeWishSequence();
+            }
+        }
+
+        function drawResultPetals() {
+            for (let p of petals) {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.angle += p.spin;
+
+                if (p.y > height + 20) {
+                    p.y = -15;
+                    p.x = Math.random() * width;
+                }
+                if (p.x > width + 20) p.x = -15;
+                if (p.x < -20) p.x = width + 15;
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+                ctx.fillStyle = p.color;
+
+                if (p.isCryo) {
+                    // Крио-кристалл
+                    ctx.beginPath();
+                    ctx.moveTo(0, -p.size);
+                    ctx.lineTo(p.size * 0.6, 0);
+                    ctx.lineTo(0, p.size);
+                    ctx.lineTo(-p.size * 0.6, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Лепесток сакуры
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        function renderLoop(now) {
+            if (mode === 'wishing') {
+                drawMeteorSequence(now);
+            } else {
+                drawBackgroundGradient(0);
+                updateAndDrawStars(1, false);
+                if (mode === 'result') {
+                    drawResultPetals();
+                }
+            }
+            requestAnimationFrame(renderLoop);
+        }
+
+        /**
+         * ============================================================================
+         * 3. ЛОГИКА ПЕРЕКЛЮЧЕНИЯ ЭКРАНОВ И НАСТРОЕК ПОЗДРАВЛЕНИЯ
+         * ============================================================================
+         */
+        const bannerScreen = document.getElementById('banner-screen');
+        const animationHud = document.getElementById('animation-hud');
+        const resultScreen = document.getElementById('result-screen');
+        const flashOverlay = document.getElementById('flash-overlay');
+        const characterVisual = document.getElementById('character-visual');
+        const starsContainer = document.getElementById('stars-container');
+
+        function startWish() {
+            if (mode === 'wishing') return;
+
+            soundEngine.playClickChime();
+            setTimeout(() => {
+                soundEngine.playWishSequence();
+            }, 120);
+
+            trailParticles = [];
+            wishStartTime = performance.now();
+            mode = 'wishing';
+
+            bannerScreen.classList.replace('visible-layer', 'hidden-layer');
+            resultScreen.classList.replace('visible-layer', 'hidden-layer');
+            animationHud.classList.replace('hidden-layer', 'visible-layer');
+        }
+
+        function completeWishSequence() {
+            if (mode === 'result') return;
+            mode = 'result';
+
+            soundEngine.stopAll();
+            soundEngine.playRevealFanfare();
+
+            // Белая/золотая вспышка на пике
+            flashOverlay.style.opacity = '1';
+            animationHud.classList.replace('visible-layer', 'hidden-layer');
+
+            // Подготовка силуэта и звезд до плавного затухания вспышки
+            characterVisual.classList.remove('revealed-mode');
+            characterVisual.classList.add('silhouette-mode');
+            renderStars();
+            initPetals();
+
+            resultScreen.classList.replace('hidden-layer', 'visible-layer');
+
+            // Рассеивание вспышки
+            setTimeout(() => {
+                flashOverlay.style.opacity = '0';
+            }, 180);
+
+            // Проявление Аяки из темного силуэта
+            setTimeout(() => {
+                characterVisual.classList.remove('silhouette-mode');
+                characterVisual.classList.add('revealed-mode');
+            }, 520);
+        }
+
+        function renderStars() {
+            starsContainer.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const star = document.createElement('span');
+                star.innerHTML = '★';
+                star.className = 'star-animate text-2xl sm:text-3xl md:text-4xl text-[#ffd573] drop-shadow-[0_0_12px_rgba(255,213,115,0.9)]';
+                star.style.animationDelay = `${0.45 + i * 0.14}s`;
+                starsContainer.appendChild(star);
+            }
+        }
+
+        function resetToBanner() {
+            soundEngine.stopAll();
+            mode = 'idle';
+            flashOverlay.style.opacity = '0';
+            resultScreen.classList.replace('visible-layer', 'hidden-layer');
+            animationHud.classList.replace('visible-layer', 'hidden-layer');
+            bannerScreen.classList.replace('hidden-layer', 'visible-layer');
+        }
+
+        // Привязка кнопок управления
+        document.getElementById('wish-trigger-btn').addEventListener('click', startWish);
+        document.getElementById('skip-btn').addEventListener('click', completeWishSequence);
+        document.getElementById('replay-btn').addEventListener('click', resetToBanner);
+
+        // Переключатель звука
+        const soundToggleBtn = document.getElementById('sound-toggle-btn');
+        const soundOnIcon = document.getElementById('sound-on-icon');
+        const soundOffIcon = document.getElementById('sound-off-icon');
+
+        soundToggleBtn.addEventListener('click', () => {
+            const isMuted = soundEngine.toggleMute();
+            soundOnIcon.classList.toggle('hidden', isMuted);
+            soundOffIcon.classList.toggle('hidden', !isMuted);
+        });
+
+        /**
+         * ============================================================================
+         * 4. МОДАЛЬНОЕ ОКНО ПЕРСОНАЛИЗАЦИИ ТЕКСТА И КАРТИНКИ (LOCALSTORAGE)
+         * ============================================================================
+         */
+        const STORAGE_KEY = 'genshin_ayaka_gift_config_v1';
+        const defaultGreeting = 'Гарант сработал! С Днём Рождения! Забери свою 5★ награду в реальном мире ❤️';
+        const defaultFooter = 'Твой персональный разработчик ✨';
+
+        const greetingTextEl = document.getElementById('greeting-text');
+        const greetingFooterEl = document.getElementById('greeting-footer');
+        const customImgEl = document.getElementById('custom-character-img');
+        const defaultSvgEl = document.getElementById('default-ayaka-svg');
+        const resetImgBtn = document.getElementById('reset-image-btn');
+
+        const inputGreeting = document.getElementById('input-greeting');
+        const inputFooter = document.getElementById('input-footer');
+        const inputImage = document.getElementById('input-image');
+
+        let customImageDataUrl = null;
+
+        function loadConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const cfg = JSON.parse(raw);
+                if (cfg.greeting) greetingTextEl.textContent = cfg.greeting;
+                if (cfg.footer) greetingFooterEl.textContent = cfg.footer;
+                if (cfg.image) {
+                    customImageDataUrl = cfg.image;
+                    applyCustomImage(cfg.image);
+                }
+            } catch (e) {
+                console.warn('Не удалось загрузить настройки:', e);
+            }
+        }
+
+        function applyCustomImage(dataUrl) {
+            if (dataUrl) {
+                customImgEl.src = dataUrl;
+                customImgEl.classList.remove('hidden');
+                defaultSvgEl.classList.add('hidden');
+                resetImgBtn.classList.remove('hidden');
+            } else {
+                customImgEl.src = '';
+                customImgEl.classList.add('hidden');
+                defaultSvgEl.classList.remove('hidden');
+                resetImgBtn.classList.add('hidden');
+            }
+        }
+
+        const settingsModal = document.getElementById('settings-modal');
+        document.getElementById('open-settings-btn').addEventListener('click', () => {
+            inputGreeting.value = greetingTextEl.textContent.trim();
+            inputFooter.value = greetingFooterEl.textContent.trim();
+            settingsModal.classList.remove('hidden');
+            settingsModal.classList.add('flex');
+        });
+
+        document.getElementById('close-settings-btn').addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+            settingsModal.classList.remove('flex');
+        });
+
+        inputImage.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                customImageDataUrl = ev.target.result;
+                applyCustomImage(customImageDataUrl);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        resetImgBtn.addEventListener('click', () => {
+            customImageDataUrl = null;
+            inputImage.value = '';
+            applyCustomImage(null);
+        });
+
+        document.getElementById('save-settings-btn').addEventListener('click', () => {
+            const newGreeting = inputGreeting.value.trim() || defaultGreeting;
+            const newFooter = inputFooter.value.trim() || defaultFooter;
+
+            greetingTextEl.textContent = newGreeting;
+            greetingFooterEl.textContent = newFooter;
+
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    greeting: newGreeting,
+                    footer: newFooter,
+                    image: customImageDataUrl
+                }));
+            } catch (e) {
+                console.warn('Ошибка сохранения в localStorage (возможно, слишком тяжелое фото):', e);
+            }
+
+            settingsModal.classList.add('hidden');
+            settingsModal.classList.remove('flex');
+        });
+
+        // Инициализация при загрузке окна
+        window.addEventListener('resize', resizeCanvas);
+        window.onload = function () {
+            resizeCanvas();
+            loadConfig();
+            requestAnimationFrame(renderLoop);
+        };
+    </script>
+</body>
+</html>
